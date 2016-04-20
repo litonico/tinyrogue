@@ -22,7 +22,7 @@ class Term
   end
 
   def draw
-    #clear
+    clear
 
     entity_map = String.new BACKGROUND_MAP
     state.entities.each do |entity|
@@ -45,6 +45,10 @@ class Entity
     @pos = pos
   end
 
+  def interaction
+    raise "entity #{self} needs interactions"
+  end
+
   def default_action state
     raise "entity #{self} needs movement pattern"
   end
@@ -60,7 +64,7 @@ class Entity
   def step state
     next_coords = default_action state
     object_moving_into = state.entity_in next_coords
-    action = movement_pattern[object_moving_into]
+    action = interaction[object_moving_into]
 
     raise "No action on #{self.class} for #{object_moving_into}" if action.nil?
 
@@ -74,7 +78,7 @@ class Rat < Entity
     "r"
   end
 
-  def movement_pattern
+  def interaction
     {
       hero:  :attack,
       wall:  :stand_still,
@@ -86,8 +90,8 @@ class Rat < Entity
     move_towards state.hero
   end
 
-  def move cell_coords
-    self.pos = cell_coords
+  def move coords
+    self.pos = coords
   end
 
   def move_towards other
@@ -100,23 +104,46 @@ class Rat < Entity
 end
 
 class Hero < Entity
+  attr_accessor :input_action
+  def initialize pos
+    @pos = pos
+
+    @input_action = nil
+  end
+
   def sprite
     "@"
   end
 
-  def step hero
-    # Hero takes input directly
+  def interaction
+    {
+      rat:   :attack,
+      wall:  :stand_still,
+      floor: :move,
+    }
   end
 
-  def left;  pos.x -= 1; end
-  def right; pos.x += 1; end
-  def up;    pos.y -= 1; end
-  def down;  pos.y += 1; end
+  def default_action state
+    raise "step taken without user input" if input_action.nil?
+    self.send(input_action)
+  end
 
-  def upleft;     pos.x -= 1; pos.y -= 1; end
-  def upright;    pos.x += 1; pos.y -= 1; end
-  def downleft;   pos.x -= 1; pos.y += 1; end
-  def downright;  pos.x += 1; pos.y += 1; end
+  def move coords
+    self.pos = coords
+  end
+
+  def attack coords
+  end
+
+  def left;  pos + Vec.new(-1,  0); end
+  def right; pos + Vec.new( 1,  0); end
+  def up;    pos + Vec.new( 0, -1); end
+  def down;  pos + Vec.new( 0,  1); end
+
+  def upleft;     pos + Vec.new(-1, -1); end
+  def upright;    pos + Vec.new( 1, -1); end
+  def downleft;   pos + Vec.new(-1,  1); end
+  def downright;  pos + Vec.new( 1,  1); end
 end
 
 class GameState
@@ -150,15 +177,15 @@ class GameState
     end
   end
 
-  def left;   hero.left; end
-  def right;  hero.right; end
-  def up;     hero.up; end
-  def down;   hero.down; end
+  def left;   hero.input_action = :left; end
+  def right;  hero.input_action = :right; end
+  def up;     hero.input_action = :up; end
+  def down;   hero.input_action = :down; end
 
-  def upleft;    hero.upleft; end
-  def upright;   hero.upright; end
-  def downleft;  hero.downleft; end
-  def downright; hero.downright; end
+  def upleft;    hero.input_action = :upleft; end
+  def upright;   hero.input_action = :upright; end
+  def downleft;  hero.input_action = :downleft; end
+  def downright; hero.input_action = :downright; end
 end
 
 class KeyboardUI
@@ -175,11 +202,12 @@ class KeyboardUI
     state.down  if input == "j"
     state.up    if input == "k"
     state.right if input == "l"
-
     state.upleft    if input == "y"
     state.upright   if input == "u"
     state.downleft  if input == "b"
     state.downright if input == "n"
+
+    state.rest if input == "z"
 
     exit() if input == "q"
   end
