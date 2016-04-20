@@ -6,6 +6,10 @@ class Vec
     @y = y
   end
 
+  def == other
+    x == other.x && y == other.y
+  end
+
   def + other
     Vec.new x+other.x, y+other.y
   end

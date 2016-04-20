@@ -22,7 +22,7 @@ class Term
   end
 
   def draw
-    clear
+    #clear
 
     entity_map = String.new BACKGROUND_MAP
     state.entities.each do |entity|
@@ -45,9 +45,28 @@ class Entity
     @pos = pos
   end
 
-  def step hero
+  def default_action state
     raise "entity #{self} needs movement pattern"
   end
+
+  def identifier
+    self.class.to_s.downcase.to_sym
+  end
+
+  def make_happen action, coords
+    self.send action, coords
+  end
+
+  def step state
+    next_coords = default_action state
+    object_moving_into = state.entity_in next_coords
+    action = movement_pattern[object_moving_into]
+
+    raise "No action on #{self.class} for #{object_moving_into}" if action.nil?
+
+    make_happen action, next_coords
+  end
+
 end
 
 class Rat < Entity
@@ -57,19 +76,26 @@ class Rat < Entity
 
   def movement_pattern
     {
-      hero: :attack,
-      wall: :stand_still,
-      open: :move,
+      hero:  :attack,
+      wall:  :stand_still,
+      floor: :move,
     }
   end
 
-  def step hero
-    move_towards hero
+  def default_action state
+    move_towards state.hero
+  end
+
+  def move cell_coords
+    self.pos = cell_coords
   end
 
   def move_towards other
     direction = other.pos - self.pos
-    self.pos += direction.normalize.snap_to_grid
+    self.pos + direction.normalize.snap_to_grid
+  end
+
+  def attack coords
   end
 end
 
@@ -105,7 +131,22 @@ class GameState
 
   def step
     entities.each do |entity|
-      entity.step hero
+      entity.step self
+    end
+  end
+
+  def entity_in coords
+    maybe_entities = entities.select do |entity|
+      entity.pos == coords
+    end
+
+    raise "More than one entity on a tile" unless maybe_entities.count == 0
+
+    if maybe_entities.empty?
+      :floor
+    else
+      maybe_entity = maybe_entities.first
+      maybe_entity.identifier
     end
   end
 
