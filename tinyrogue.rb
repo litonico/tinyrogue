@@ -46,13 +46,21 @@ class Entity
   end
 
   def step hero
-    raise "unnamed entity needs movement pattern"
+    raise "entity #{self} needs movement pattern"
   end
 end
 
 class Rat < Entity
   def sprite
     "r"
+  end
+
+  def movement_pattern
+    {
+      hero: :attack,
+      wall: :stand_still,
+      open: :move,
+    }
   end
 
   def step hero
@@ -82,7 +90,7 @@ class Hero < Entity
   def upleft;     pos.x -= 1; pos.y -= 1; end
   def upright;    pos.x += 1; pos.y -= 1; end
   def downleft;   pos.x -= 1; pos.y += 1; end
-  def downright;  pos.x -= 1; pos.y += 1; end
+  def downright;  pos.x += 1; pos.y += 1; end
 end
 
 class GameState
@@ -101,21 +109,15 @@ class GameState
     end
   end
 
-  def left
-    hero.left
-  end
+  def left;   hero.left; end
+  def right;  hero.right; end
+  def up;     hero.up; end
+  def down;   hero.down; end
 
-  def right
-    hero.right
-  end
-
-  def up
-    hero.up
-  end
-
-  def down
-    hero.down
-  end
+  def upleft;    hero.upleft; end
+  def upright;   hero.upright; end
+  def downleft;  hero.downleft; end
+  def downright; hero.downright; end
 end
 
 class KeyboardUI
@@ -132,6 +134,11 @@ class KeyboardUI
     state.down  if input == "j"
     state.up    if input == "k"
     state.right if input == "l"
+
+    state.upleft    if input == "y"
+    state.upright   if input == "u"
+    state.downleft  if input == "b"
+    state.downright if input == "n"
 
     exit() if input == "q"
   end
