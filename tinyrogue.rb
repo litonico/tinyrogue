@@ -63,12 +63,17 @@ class Entity
 
   def step state
     next_coords = default_action state
-    object_moving_into = state.entity_in next_coords
-    action = interaction[object_moving_into]
 
-    raise "No action on #{self.class} for #{object_moving_into}" if action.nil?
+    if next_coords != pos
+      object_moving_into = state.entity_in next_coords
+      action = interaction[object_moving_into]
 
-    make_happen action, next_coords
+      if action.nil?
+        raise "No action on #{self.identifier} to interact with #{object_moving_into}"
+      end
+
+      make_happen action, next_coords
+    end
   end
 
 end
@@ -100,6 +105,7 @@ class Rat < Entity
   end
 
   def attack coords
+    raise "rat attacks! (write a notifications display)"
   end
 end
 
@@ -132,8 +138,12 @@ class Hero < Entity
     self.pos = coords
   end
 
+
   def attack coords
   end
+
+  # Input commands (return a pos)
+  def rest; pos; end
 
   def left;  pos + Vec.new(-1,  0); end
   def right; pos + Vec.new( 1,  0); end
@@ -167,7 +177,9 @@ class GameState
       entity.pos == coords
     end
 
-    raise "More than one entity on a tile" unless maybe_entities.count == 0
+    if maybe_entities.count > 1
+      raise "More than one entity on a tile: #{maybe_entities}"
+    end
 
     if maybe_entities.empty?
       :floor
@@ -177,15 +189,17 @@ class GameState
     end
   end
 
-  def left;   hero.input_action = :left; end
-  def right;  hero.input_action = :right; end
-  def up;     hero.input_action = :up; end
-  def down;   hero.input_action = :down; end
+  def left;      hero.input_action = :left; end
+  def right;     hero.input_action = :right; end
+  def up;        hero.input_action = :up; end
+  def down;      hero.input_action = :down; end
 
   def upleft;    hero.input_action = :upleft; end
   def upright;   hero.input_action = :upright; end
   def downleft;  hero.input_action = :downleft; end
   def downright; hero.input_action = :downright; end
+
+  def rest;      hero.input_action = :rest; end
 end
 
 class KeyboardUI
@@ -198,16 +212,16 @@ class KeyboardUI
   def handle_input
     input = get_input
 
-    state.left  if input == "h"
-    state.down  if input == "j"
-    state.up    if input == "k"
-    state.right if input == "l"
+    state.left      if input == "h"
+    state.down      if input == "j"
+    state.up        if input == "k"
+    state.right     if input == "l"
     state.upleft    if input == "y"
     state.upright   if input == "u"
     state.downleft  if input == "b"
     state.downright if input == "n"
 
-    state.rest if input == "z"
+    state.rest      if input == "z"
 
     exit() if input == "q"
   end
