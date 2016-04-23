@@ -40,9 +40,14 @@ class Term
 end
 
 class Entity
-  attr_accessor :pos
-  def initialize pos
+  attr_reader   :state
+  attr_accessor :pos, :health, :attack_power
+
+  def initialize state, pos, health, attack_power
     @pos = pos
+    @state = state
+    @health = health
+    @attack_power = attack_power
   end
 
   def interaction
@@ -62,11 +67,11 @@ class Entity
   end
 
   def step state
-    next_coords = default_action state
+    next_coords = default_action
 
     if next_coords != pos
       object_moving_into = state.entity_in next_coords
-      action = interaction[object_moving_into]
+      action = interaction[object_moving_into.identifier]
 
       if action.nil?
         raise "No action on #{self.identifier} to interact with #{object_moving_into}"
@@ -76,6 +81,9 @@ class Entity
     end
   end
 
+  def get_hit damage
+    self.health -= damage
+  end
 end
 
 class Rat < Entity
@@ -91,7 +99,7 @@ class Rat < Entity
     }
   end
 
-  def default_action state
+  def default_action
     move_towards state.hero
   end
 
@@ -105,14 +113,17 @@ class Rat < Entity
   end
 
   def attack coords
-    raise "rat attacks! (write a notifications display)"
+    state.damage coords, attack_power
   end
+end
+
+class Floor < Entity
 end
 
 class Hero < Entity
   attr_accessor :input_action
-  def initialize pos
-    @pos = pos
+  def initialize state, pos, health, attack_power
+    super state, pos, health, attack_power
 
     @input_action = nil
   end
@@ -129,7 +140,7 @@ class Hero < Entity
     }
   end
 
-  def default_action state
+  def default_action
     raise "step taken without user input" if input_action.nil?
     self.send(input_action)
   end
@@ -138,8 +149,8 @@ class Hero < Entity
     self.pos = coords
   end
 
-
   def attack coords
+    state.damage coords, attack_power
   end
 
   # Input commands (return a pos)
@@ -157,13 +168,23 @@ class Hero < Entity
 end
 
 class GameState
-  attr_reader :entities, :hero
+  attr_reader :entities, :hero, :floor
 
   def initialize
     @entities = []
-    @entities << Rat.new(Vec.new(0,0))
-    @hero = Hero.new Vec.new(3,2)
+    @entities << Rat.new(self, Vec.new(0,0), 20, 2)
+    @hero = Hero.new self, Vec.new(3,2), 40, 5
     @entities << @hero
+
+    @floor = Floor.new self, Vec.new(0,0), nil, nil
+  end
+
+  def damage coords, damage
+    entity = entity_in coords
+    entity.get_hit damage
+    if entity.health <= 0
+      self.entities.delete entity
+    end
   end
 
   def step
@@ -182,10 +203,9 @@ class GameState
     end
 
     if maybe_entities.empty?
-      :floor
+      floor
     else
-      maybe_entity = maybe_entities.first
-      maybe_entity.identifier
+      maybe_entities.first
     end
   end
 
