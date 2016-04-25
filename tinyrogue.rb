@@ -2,15 +2,18 @@ require 'io/console'
 require './vec'
 
 BACKGROUND_MAP = <<-MAP
-........
-........
-........
-........
-........
+.................
+.................
+.................
+.................
+.................
+.................
+.................
+.................
 MAP
 
 class Term
-  MAP_WIDTH = 8
+  MAP_WIDTH = 17
   TRAILING_NEWLINE = 1
 
   attr_reader :state
@@ -19,6 +22,20 @@ class Term
     @state = state
 
     puts "hjkl to move, q to quit"
+  end
+
+  def display_enemy enemy
+    "#{enemy.identifier}: #{enemy.health}"
+  end
+
+  def hud
+    hero = state.hero
+    enemies = state.entities - [hero]
+    <<-HUD
+      Health: #{hero.health}
+      Enemies:
+        #{enemies.map{ |e| display_enemy e }.join("\n")}
+    HUD
   end
 
   def draw
@@ -32,6 +49,7 @@ class Term
     end
 
     puts entity_map
+    puts hud
   end
 
   def clear
@@ -93,11 +111,13 @@ class Rat < Entity
 
   def interaction
     {
-      hero:  :attack,
-      wall:  :stand_still,
       floor: :move,
+      hero:  :attack,
+      rat:   :stand_still,
+      wall:  :stand_still,
     }
   end
+
 
   def default_action
     move_towards state.hero
@@ -105,6 +125,10 @@ class Rat < Entity
 
   def move coords
     self.pos = coords
+  end
+
+  def stand_still coords
+    coords
   end
 
   def move_towards other
@@ -172,9 +196,10 @@ class GameState
 
   def initialize
     @entities = []
-    @entities << Rat.new(self, Vec.new(0,0), 20, 2)
     @hero = Hero.new self, Vec.new(3,2), 40, 5
     @entities << @hero
+
+    @entities << Rat.new(self, Vec.new(0,0), 20, 2)
 
     @floor = Floor.new self, Vec.new(0,0), nil, nil
   end
@@ -188,8 +213,24 @@ class GameState
   end
 
   def step
+    unless entities[0] == hero
+      raise "Hero must be the first entity (in order to move first)"
+    end
+
     entities.each do |entity|
       entity.step self
+    end
+
+    world_step
+  end
+
+  def world_step
+    spawn_enemies
+  end
+
+  def spawn_enemies
+    if rand < 0.1
+      @entities << Rat.new(self, Vec.new(0,0), 20, 2)
     end
   end
 
