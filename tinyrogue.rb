@@ -32,9 +32,9 @@ class Term
     hero = state.hero
     enemies = state.entities - [hero]
     <<-HUD
-      Health: #{hero.health}
-      Enemies:
-        #{enemies.map{ |e| display_enemy e }.join("\n")}
+Health: #{hero.health}
+Enemies:
+#{enemies.map{ |e| display_enemy e }.join("\n")}
     HUD
   end
 
@@ -61,11 +61,9 @@ class Entity
   attr_reader   :state
   attr_accessor :pos, :health, :attack_power
 
-  def initialize state, pos, health, attack_power
+  def initialize state, pos
     @pos = pos
     @state = state
-    @health = health
-    @attack_power = attack_power
   end
 
   def interaction
@@ -99,14 +97,17 @@ class Entity
     end
   end
 
-  def get_hit damage
-    self.health -= damage
-  end
 end
 
 class Rat < Entity
-  def sprite
-    "r"
+  attr_reader :sprite
+
+  def initialize state, pos
+    super state, pos
+
+    @health = 40
+    @attack_power = 5
+    @sprite = "r"
   end
 
   def interaction
@@ -117,7 +118,6 @@ class Rat < Entity
       wall:  :stand_still,
     }
   end
-
 
   def default_action
     move_towards state.hero
@@ -139,6 +139,14 @@ class Rat < Entity
   def attack coords
     state.damage coords, attack_power
   end
+
+  def get_hit damage
+    self.health -= damage
+  end
+
+  def die
+    state.delete_entity self
+  end
 end
 
 class Floor < Entity
@@ -146,14 +154,16 @@ end
 
 class Hero < Entity
   attr_accessor :input_action
-  def initialize state, pos, health, attack_power
-    super state, pos, health, attack_power
+  attr_reader :sprite
+
+  def initialize state, pos
+    super state, pos
+
+    @health = 40
+    @attack_power = 5
+    @sprite = "@"
 
     @input_action = nil
-  end
-
-  def sprite
-    "@"
   end
 
   def interaction
@@ -177,6 +187,14 @@ class Hero < Entity
     state.damage coords, attack_power
   end
 
+  def get_hit damage
+    self.health -= damage
+  end
+
+  def die
+    abort "You died!"
+  end
+
   # Input commands (return a pos)
   def rest; pos; end
 
@@ -196,19 +214,23 @@ class GameState
 
   def initialize
     @entities = []
-    @hero = Hero.new self, Vec.new(3,2), 40, 5
+    @hero = Hero.new self, Vec.new(3,2)
     @entities << @hero
 
-    @entities << Rat.new(self, Vec.new(0,0), 20, 2)
+    @entities << Rat.new(self, Vec.new(0,0))
 
-    @floor = Floor.new self, Vec.new(0,0), nil, nil
+    @floor = Floor.new self, Vec.new(0,0)
+  end
+
+  def delete_entity entity
+    entities.delete entity
   end
 
   def damage coords, damage
     entity = entity_in coords
     entity.get_hit damage
     if entity.health <= 0
-      self.entities.delete entity
+      entity.die
     end
   end
 
@@ -230,7 +252,7 @@ class GameState
 
   def spawn_enemies
     if rand < 0.1
-      @entities << Rat.new(self, Vec.new(0,0), 20, 2)
+      @entities << Rat.new(self, Vec.new(0,0))
     end
   end
 
