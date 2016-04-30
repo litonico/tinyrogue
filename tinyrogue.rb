@@ -3,14 +3,18 @@ require './vec'
 
 BACKGROUND_MAP = <<-MAP
 .................
+...r.............
 .................
 .................
 .................
 .................
-.................
-.................
+.......@.........
 .................
 MAP
+
+$entity_kinds = []
+def parse_map map, gamestate
+end
 
 class Term
   MAP_WIDTH = 17
@@ -105,8 +109,8 @@ class Rat < Entity
   def initialize state, pos
     super state, pos
 
-    @health = 40
-    @attack_power = 5
+    @health = 20
+    @attack_power = 2
     @sprite = "r"
   end
 
@@ -150,6 +154,30 @@ class Rat < Entity
 end
 
 class Floor < Entity
+end
+
+class StoneWall < Entity
+  def initialize state, pos
+    super state, pos
+
+    @health = 1
+    @attack_power = 5
+    @sprite = "█"
+
+    @input_action = nil
+  end
+end
+
+class DirtWall < Entity
+  def initialize state, pos
+    super state, pos
+
+    @health = 1
+    @attack_power = 5
+    @sprite = "#"
+
+    @input_action = nil
+  end
 end
 
 class Hero < Entity
